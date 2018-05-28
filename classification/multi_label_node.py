@@ -51,7 +51,9 @@ class NodeClassification:
         results = {}
         averages = ['micro', 'macro']
         for average in averages:
-            results[average] = OrderedDict({ratio: [] for ratio in training_ratios})
+            results[average] = OrderedDict()
+            for ratio in training_ratios:
+                results[average].update({ratio: []})
 
         for train_ratio in training_ratios:
 
