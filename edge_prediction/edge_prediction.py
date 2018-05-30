@@ -99,3 +99,6 @@ ep.read_graph(file_path=graph_path, file_type="gml")
 train, pos, neg = ep.split_into_train_test_sets(ratio=0.5)
 m = ep.train(ep.g, (pos, neg))
 print(m)
+
+#https://github.com/adocherty/node2vec_linkprediction/blob/master/link_prediction.py
+#node2vec link prediction github
