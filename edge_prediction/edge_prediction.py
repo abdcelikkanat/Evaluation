@@ -6,6 +6,7 @@ from sklearn import metrics, model_selection, pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 
+
 class EdgePrediction:
     def __init__(self):
         self.g = None
@@ -198,6 +199,8 @@ class EdgePrediction:
         print("Train-Test: {}, {}, {}".format(auc_train, auc_test, avg))
         """
 
+
+"""
 graph_path = "../examples/inputs/facebook.gml"
 ep = EdgePrediction()
 ep.read_graph(file_path=graph_path, file_type="gml")
@@ -208,3 +211,4 @@ ep.run(metric="jaccard")
 
 #https://github.com/adocherty/node2vec_linkprediction/blob/master/link_prediction.py
 #node2vec link prediction github
+"""
