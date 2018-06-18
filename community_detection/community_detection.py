@@ -14,46 +14,29 @@ class CommunityDetection(GraphBase):
     def detect_corresponding_clusters(self, clusters_pred):
         cluster_pairs_f1 = np.zeros(shape=(self.number_of_clusters, self.number_of_clusters), dtype=np.float)
 
-        clusters_true = nx.get_node_attributes(self.g, "clusters")
-
-        id2node = [node for node in self.g.nodes()]
-
-        mlb = MultiLabelBinarizer(range(self.g.number_of_nodes()))
-        # Find the corresponding cluster labels
-        for cluster_id in range(self.number_of_clusters):
-            for corr_cluster_id in range(self.number_of_clusters):
-                y_true = [1 if cluster_id in list(clusters_true[id2node[i]]) else 0 for i in
-                          range(self.g.number_of_nodes())]
-                y_pred = [1 if corr_cluster_id in list(clusters_pred[id2node[i]]) else 0 for i in
-                          range(self.g.number_of_nodes())]
-
-                cluster_pairs_f1[cluster_id, corr_cluster_id] = f1_score(y_true=mlb.fit_transform(y_true),
-                                                                         y_pred=mlb.fit_transform(y_pred))
-
-        corr_cluster_labels = np.argmax(cluster_pairs_f1, axis=1)
-        print(cluster_pairs_f1)
-        return list(corr_cluster_labels)
-
-    def detect_corresponding_clusters_eski(self, clusters_pred):
-        cluster_pairs_f1 = np.zeros(shape=(self.number_of_clusters, self.number_of_clusters), dtype=np.float)
-
-        clusters_true = nx.get_node_attributes(self.g, "clusters")
+        node2cluster_true_labels = nx.get_node_attributes(self.g, "clusters")
 
         id2node = [node for node in self.g.nodes()]
 
         # Find the corresponding cluster labels
         for cluster_id in range(self.number_of_clusters):
-            for corr_cluster_id in range(self.number_of_clusters):
-                y_true = [1 if cluster_id in list(clusters_true[id2node[i]]) else 0 for i in
+            for estimated_cluster_id in range(self.number_of_clusters):
+                y_true = [1 if cluster_id in list(node2cluster_true_labels[id2node[i]]) else 0 for i in
                           range(self.g.number_of_nodes())]
-                y_pred = [1 if corr_cluster_id in list(clusters_pred[id2node[i]]) else 0 for i in
+                y_pred = [1 if estimated_cluster_id in list(clusters_pred[id2node[i]]) else 0 for i in
                           range(self.g.number_of_nodes())]
 
-                cluster_pairs_f1[cluster_id, corr_cluster_id] = f1_score(y_true=y_true, y_pred=y_pred)
+                cluster_pairs_f1[cluster_id, estimated_cluster_id] = f1_score(y_true=y_true, y_pred=y_pred)
 
-        corr_cluster_labels = np.argmax(cluster_pairs_f1, axis=1)
-        print(cluster_pairs_f1)
-        return list(corr_cluster_labels)
+        corr_cluster_labels = np.argmax(cluster_pairs_f1, axis=0)
+
+        # Check that all labels are distinct, otherwise it means that multiple are assigned to the same label
+        if corr_cluster_labels.size != np.unique(corr_cluster_labels).size:
+            raise ValueError("A label has been assigned multiple times!")
+
+        return corr_cluster_labels.tolist()
+
+
 
     def avg_f1_score(self, clusters_pred):
         pass
