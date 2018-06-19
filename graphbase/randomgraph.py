@@ -1,6 +1,7 @@
 import networkx as nx
-
+import igraph as ig
 import numpy as np
+from networkx.algorithms.community import LFR_benchmark_graph
 
 
 def alias_setup(probs):
@@ -13,8 +14,6 @@ def alias_setup(probs):
     smaller = []
     larger = []
     for kk, prob in enumerate(probs):
-        print(K)
-        print(prob)
         q[kk] = K * prob
         if q[kk] < 1.0: # if prob < 1.0 / float(K):
             smaller.append(kk)
@@ -77,49 +76,91 @@ class RanGraphGen:
 
     def stochastic_block_model(self):
 
-        N = self._model['N'] # the number of nodes
-        K = self._model['K'] # the number of clusters
-        P = self._model['P'] # edge probability matrix between nodes belonging different communities
-        block_sizes = self._model['block_sizes']
+        n = self._model['sbm_N']  # the number of nodes
+        p = self._model['sbm_P']  # edge probability matrix between nodes belonging different communities
+        block_sizes = self._model['sbm_block_sizes']
+        K = len(p)  # number of communities
+
+        assert n == np.sum(block_sizes), "The sum of the block sizes must be equal to the number of nodes, N"
+
+        """
+        graph = nx.Graph()
+        igraph = ig.Graph.SBM(n=n, pref_matrix=p, block_sizes=block_sizes, directed=False, loops=False)
+        graph.add_edges_from([edge.tuple for edge in igraph.es])
+        """
 
         graph = nx.Graph()
+        node2community = {}
 
-        #J, q = alias_setup(P)
-        clusters = [[] for _ in range(K)]
+        communities = [[] for _ in range(K)]
 
-        for node in range(N):
-
-            """
-            k = alias_draw(J, q)
-            graph.add_node(str(node), clusters=[k])
-            """
+        for node in range(n):
             k = int(np.rint(float(node) / np.sum(block_sizes)))
-            clusters[k].append(str(node))
+            communities[k].append(str(node))
+            graph.add_node(str(node))
+            node2community.update({str(node): [k]})
 
         for k1 in range(K):
             for k2 in range(k1, K):
-                # Generate edges for each cluster
+                # Generate edges for each community
                 if k1 == k2:
-                    subg = nx.fast_gnp_random_graph(n=len(clusters[k1]), p=P[k1][k2])
-                # Generate edges for nodes belonging to distinct clusters
+                    subg = nx.fast_gnp_random_graph(n=len(communities[k1]), p=p[k1][k2])
+
                 else:
-                    subg = nx.algorithms.bipartite.random_graph(n=len(clusters[k1]), m=len(clusters[k2]), p=P[k1][k2])
+                    subg = nx.algorithms.bipartite.random_graph(n=len(communities[k1]), m=len(communities[k2]), p=p[k1][k2])
 
                 for edge in subg.edges():
-                    n1 = clusters[k1][subg[int(edge[0])]]
-                    n2 = clusters[k2][subg[int(edge[1])-len(clusters[k1])]]
+                    n1 = communities[k1][int(edge[0])]
+                    n2 = communities[k2][int(edge[1])-len(communities[k1])]
                     graph.add_edge(n1, n2)
+
+        nx.set_node_attributes(graph, values=node2community, name='community')
 
         return graph
 
+    def lfr_model(self):
+
+        n = self._model['lfr_N']
+        tau1 = self._model['lfr_tau1']  # power law exponent for node degree distribution
+        tau2 = self._model['lfr_tau2']  # power law exponent for community size distribution
+        mu = self._model['lfr_mu']  # fraction of edges between communities
+        min_deg = self._model['lfr_min_degree']
+        max_deg = self._model['lfr_max_degree'] if 'lfr_max_degree' in self._model else n
+        avg_deg = self._model['lfr_average_degree']
+        min_comm = self._model['lfr_min_comm']
+        max_comm = self._model['lfr_max_comm']
+
+        graph = LFR_benchmark_graph(n=n, tau1=tau1, tau2=tau2, mu=mu,
+                                    average_degree=avg_deg, min_degree=min_deg, max_degree=max_deg,
+                                    min_community=min_comm, max_community=max_comm)
+
+        return graph
+
+"""
+
 model = {}
-model['N'] = 10
-model['K'] = 2
-model['P'] = [[0.3, 0.4], [0.2, 0.7]]
-model['block_sizes'] = [5, 5]
+# Parameters used for Stochastic Block Model
+model['sbm_N'] = 10
+model['sbm_P'] = [[0.3, 0.4], [0.4, 0.7]]
+model['sbm_block_sizes'] = [5, 5]
+# Parameters used for Lancichinetti-Fortunato-Radicchi (LFR)
+model['lfr_N'] = 0
+model['lfr_tau1'] = 0
+model['lfr_tau2'] = 0
+model['lfr_mu'] = 0
+model['lfr_min_degree'] = 0
+model['lfr_max_degree'] = 0
+model['lfr_average_degree'] = 0
+model['lfr_min_comm'] = 0
+model['lfr_max_comm'] = 0
+
+
 rg = RanGraphGen(model)
 graph = rg.stochastic_block_model()
 print(graph.number_of_nodes())
+
+
+"""
 
 """
 def SBM_simulate_fast(model):

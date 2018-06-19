@@ -5,7 +5,7 @@ import networkx as nx
 class GraphBase:
     def __init__(self):
         self.g = None
-        self.number_of_clusters = 0
+        self.number_of_communities = 0
 
     def read_graph(self, graph_path):
 
@@ -20,17 +20,17 @@ class GraphBase:
     def set_graph(self, nxg):
         self.g = nxg
 
-    def set_number_of_clusters(self, value):
-        self.number_of_clusters = value
+    def set_number_of_communities(self, value):
+        self.number_of_communities = value
 
-    def detect_number_of_clusters(self):
+    def detect_number_of_communities(self):
 
-        # It is assumed that the labels of clusters starts from 0 to K-1
-        max_cluster_label = -1
-        clusters = nx.get_node_attributes(self.g, "clusters")
+        # It is assumed that the labels of communities starts from 0 to K-1
+        max_community_label = -1
+        communities = nx.get_node_attributes(self.g, "community")
         for node in self.g.nodes():
-            c_max = max(list(clusters[node]))
-            if c_max > max_cluster_label:
-                max_cluster_label = c_max
+            c_max = max(list(communities[node]))
+            if c_max > max_community_label:
+                max_community_label = c_max
 
-        return max_cluster_label + 1
+        return max_community_label + 1
