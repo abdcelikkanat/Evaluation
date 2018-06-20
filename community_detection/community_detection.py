@@ -45,7 +45,6 @@ class CommunityDetection(GraphBase):
     def replace_assignments(self):
         pass
 
-
     def avg_f1_score(self, clusters_pred):
         pass
         """
@@ -69,12 +68,18 @@ class CommunityDetection(GraphBase):
 
     def nmi_score(self, node2community_pred_labels):
         # Normalized Mutual Information (NMI) has been proposed as a performance metric for community detection
+        # It is implemented only for non-overlapping communities
 
-        id2node = [node for node in self.g.nodes()]
+        node_list = [node for node in self.g.nodes()]
+
         node2community_true_labels = nx.get_node_attributes(self.g, "community")
+        for node in self.g.nodes():
+            comm_list = node2community_true_labels[node]
+            if type(comm_list) == int:
+                node2community_true_labels[node] = [comm_list]
 
-        labels_true = [node2community_true_labels[node][0] for node in self.g.nodes()]
-        labels_pred = [node2community_pred_labels[node][0] for node in self.g.nodes()]
+        labels_true = [node2community_true_labels[node][0] for node in node_list]
+        labels_pred = [node2community_pred_labels[node][0] for node in node_list]
 
         score = normalized_mutual_info_score(labels_true=labels_true, labels_pred=labels_pred)
 

@@ -29,7 +29,11 @@ class GraphBase:
         max_community_label = -1
         communities = nx.get_node_attributes(self.g, "community")
         for node in self.g.nodes():
-            c_max = max(list(communities[node]))
+            comm_list = communities[node]
+            if type(comm_list) is int:
+                comm_list = [comm_list]
+
+            c_max = max(comm_list)
             if c_max > max_community_label:
                 max_community_label = c_max
 

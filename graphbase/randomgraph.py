@@ -124,17 +124,23 @@ class RanGraphGen:
         tau1 = self._model['lfr_tau1']  # power law exponent for node degree distribution
         tau2 = self._model['lfr_tau2']  # power law exponent for community size distribution
         mu = self._model['lfr_mu']  # fraction of edges between communities
-        min_deg = self._model['lfr_min_degree']
-        max_deg = self._model['lfr_max_degree'] if 'lfr_max_degree' in self._model else n
-        avg_deg = self._model['lfr_average_degree']
-        min_comm = self._model['lfr_min_comm']
-        max_comm = self._model['lfr_max_comm']
+        max_deg = self._model['lfr_max_deg'] if 'lfr_max_deg' in self._model else n
+        min_comm = self._model['lfr_min_community']
+        max_comm = self._model['lfr_max_community'] if 'lfr_max_community' in self._model else n
 
-        graph = LFR_benchmark_graph(n=n, tau1=tau1, tau2=tau2, mu=mu,
-                                    average_degree=avg_deg, min_degree=min_deg, max_degree=max_deg,
-                                    min_community=min_comm, max_community=max_comm)
+        if 'lfr_average_degree' in self._model:
+            avg_deg = self._model['lfr_average_degree']
+            graph = LFR_benchmark_graph(n=n, tau1=tau1, tau2=tau2, mu=mu,
+                                        average_degree=avg_deg, max_degree=max_deg,
+                                        min_community=min_comm, max_community=max_comm)
+            return graph
+        elif 'lfr_min_degree' in self._model:
+            min_deg = self._model['lfr_min_degree']
+            graph = LFR_benchmark_graph(n=n, tau1=tau1, tau2=tau2, mu=mu,
+                                        min_degree=min_deg, max_degree=max_deg,
+                                        min_community=min_comm, max_community=max_comm)
 
-        return graph
+            return graph
 
 """
 

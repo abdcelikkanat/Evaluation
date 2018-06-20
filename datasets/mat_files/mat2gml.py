@@ -51,9 +51,9 @@ values = {node: [] for node in g.nodes()}
 cx = cluster_matrix.tocoo()
 for i, k, val in zip(cx.row, cx.col, cx.data):
     if val > 0:
-        values[str(i)].append(str(k))
+        values[str(i)].append(int(k))
 
-nx.set_node_attributes(g, name="clusters", values=values)
+nx.set_node_attributes(g, name="community", values=values)
 
 # Finally, save the file
 nx.write_gml(g, output_file)
