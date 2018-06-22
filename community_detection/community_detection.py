@@ -66,7 +66,7 @@ class CommunityDetection(GraphBase):
 
         """
 
-    def nmi_score(self, node2community_pred_labels):
+    def compute_nmi_score(self, node2community_pred_labels):
         # Normalized Mutual Information (NMI) has been proposed as a performance metric for community detection
         # It is implemented only for non-overlapping communities
 
