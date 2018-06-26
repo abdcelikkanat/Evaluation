@@ -1,18 +1,20 @@
 import sys
 sys.path.append("../../deepwalk/deepwalk")
 from community_detection.detection import CommunityDetection
+import numpy as np
+
 
 p = 0.7
 q = 0.3
 k = 80
-sizes = ":".join(str(v) for v in [334, 333, 333])
+sizes = ":".join(str(v) for v in np.ones(5, dtype=np.int)*600)
 
 
 params = {'directed': False}
-kmeans_num_of_communities = 2
+kmeans_num_of_communities = 5
 
 #basename = "synthetic_n1000"
-basename = "synthetic_k3"
+basename = "synthetic_k5"
 graph_path = "./inputs/"+basename+"_p{}_q{}_sizes".format(p, q)+sizes+"_n80_l10_w10_k{}_deepwalk/".format(k)
 graph_path += basename+"_p{}_q{}_sizes".format(p, q)+sizes+".gml"
 
