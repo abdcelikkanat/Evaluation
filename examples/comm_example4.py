@@ -12,16 +12,16 @@ from graphbase import randomgraph
 from sklearn.cluster import KMeans
 from community_detection.detection import CommunityDetection
 
-N = 100
+N = 1000
 kmeans_num_of_communities = 2
 
 lfr_params = {}
 lfr_params['lfr_N'] = N
 lfr_params['lfr_tau1'] = 2.1  # power law exponent for node degree distribution
-lfr_params['lfr_tau2'] = 2.4  # power law exponent for community size distribution
+lfr_params['lfr_tau2'] = 2.1  # power law exponent for community size distribution
 lfr_params['lfr_mu'] = 0.2  # fraction of edges between communities
-lfr_params['lfr_min_degree'] = 3
-lfr_params['lfr_min_community'] = 32  # minimum size of communities in the graph
+lfr_params['lfr_min_degree'] = 7
+lfr_params['lfr_min_community'] = 500  # minimum size of communities in the graph
 
 dw_params = {}
 dw_params['n'] = 80
@@ -34,7 +34,7 @@ rg = randomgraph.RanGraphGen()
 rg.set_model(model=lfr_params)
 g = rg.lfr_model()
 
-graph_path = "./outputs/lfr_synthetic_n100.gml"
+graph_path = "./outputs/lfr_synthetic_n1000.gml"
 nx.write_gml(g, graph_path)
 
 # Find the embedding of the
