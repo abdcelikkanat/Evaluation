@@ -1,10 +1,11 @@
 import networkx as nx
 import gensim
+from scipy.optimize import linear_sum_assignment
 from evaluation.evaluation import Evaluation
 from sklearn.cluster import KMeans
 from evaluation.evaluation import Evaluation
-from sklearn.metrics import normalized_mutual_info_score
-
+from sklearn.metrics import normalized_mutual_info_score, confusion_matrix
+from sklearn import metrics
 
 class CommunityDetection(Evaluation):
 
@@ -26,6 +27,21 @@ class CommunityDetection(Evaluation):
         labels_pred = [node2community_pred_labels[id2node[inx]][0] for inx in range(n)]
 
         score = normalized_mutual_info_score(labels_true=labels_true, labels_pred=labels_pred)
+
+        return score
+
+    def _compute_ccr_score(self, id2node, node2community_true_labels, node2community_pred_labels):
+        # Correct Classification Rate (CCR) has been proposed as a performance metric for community detection
+        # It is implemented only for non-overlapping communities
+        n = len(id2node)
+        labels_true = [node2community_true_labels[id2node[inx]][0] for inx in range(n)]
+        labels_pred = [node2community_pred_labels[id2node[inx]][0] for inx in range(n)]
+
+        conf_matrix = confusion_matrix(labels_true, labels_pred)
+        # Find the matching community labels
+        r, c = linear_sum_assignment(-conf_matrix)  # uses the Hungarian algorithm to solve it
+
+        score = float(conf_matrix[r, c].sum()) / float(n)
 
         return score
 
@@ -51,7 +67,7 @@ class CommunityDetection(Evaluation):
         id2node = [node for node in g.nodes()]
         x = [node_model[id2node[inx]] for inx in range(g.number_of_nodes())]
         # Apply k-means algorithm
-        print(num_of_communities)
+
         kmeans = KMeans(n_clusters=num_of_communities, random_state=0).fit(x)
         labels = kmeans.labels_.tolist()
 
@@ -61,6 +77,7 @@ class CommunityDetection(Evaluation):
         # print(communities_true)
         # print(communities_pred)
 
-        score = self._compute_nmi_score(id2node, node2community_true, node2community_pred)
+        nmi_score = self._compute_nmi_score(id2node, node2community_true, node2community_pred)
+        ccr_score = self._compute_ccr_score(id2node, node2community_true, node2community_pred)
 
-        return score
+        return nmi_score, ccr_score
