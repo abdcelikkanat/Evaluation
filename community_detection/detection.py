@@ -4,8 +4,12 @@ from scipy.optimize import linear_sum_assignment
 from evaluation.evaluation import Evaluation
 from sklearn.cluster import KMeans
 from evaluation.evaluation import Evaluation
-from sklearn.metrics import normalized_mutual_info_score, confusion_matrix
+from sklearn.metrics import normalized_mutual_info_score, mutual_info_score, confusion_matrix, adjusted_rand_score
 from sklearn import metrics
+import numpy as np
+from scipy.stats import entropy
+from sklearn.metrics.cluster import contingency_matrix
+
 
 class CommunityDetection(Evaluation):
 
@@ -45,6 +49,38 @@ class CommunityDetection(Evaluation):
 
         return score
 
+    def _compute_entropy(self, labels):
+
+        return entropy(np.bincount(labels).astype(np.float))
+
+    def _compute_vi_score(self, id2node, node2community_true_labels, node2community_pred_labels):
+        # Computes the variational information score
+        # V(X,Y) = H(X) + H(Y) - 2I(X;Y)
+
+        n = len(id2node)
+        labels_true = [node2community_true_labels[id2node[inx]][0] for inx in range(n)]
+        labels_pred = [node2community_pred_labels[id2node[inx]][0] for inx in range(n)]
+
+        h_true, h_pred = self._compute_entropy(labels_true), self._compute_entropy(labels_pred)
+
+        con_matrix = np.array(contingency_matrix(labels_true=labels_true, labels_pred=labels_pred), dtype=np.float)
+        mi = mutual_info_score(labels_true=labels_true, labels_pred=labels_pred, contingency=con_matrix)
+
+        score = h_true + h_pred - 2.0*mi
+
+        return score
+
+    def _compute_ari_score(self, id2node, node2community_true_labels, node2community_pred_labels):
+        # Compute the adjusted rand index score
+
+        n = len(id2node)
+        labels_true = [node2community_true_labels[id2node[inx]][0] for inx in range(n)]
+        labels_pred = [node2community_pred_labels[id2node[inx]][0] for inx in range(n)]
+
+        score = adjusted_rand_score(labels_true=labels_true, labels_pred=labels_pred)
+
+        return score
+
     def _get_node2community(self, nxg):
 
         node2community = nx.get_node_attributes(nxg, name='community')
@@ -79,5 +115,9 @@ class CommunityDetection(Evaluation):
 
         nmi_score = self._compute_nmi_score(id2node, node2community_true, node2community_pred)
         ccr_score = self._compute_ccr_score(id2node, node2community_true, node2community_pred)
+        vi_score = self._compute_vi_score(id2node, node2community_true, node2community_pred)
+        ari_score = self._compute_ari_score(id2node, node2community_true, node2community_pred)
 
-        return nmi_score, ccr_score
+        return nmi_score, ccr_score, vi_score, ari_score
+
+

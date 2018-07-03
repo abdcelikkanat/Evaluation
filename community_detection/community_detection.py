@@ -85,6 +85,7 @@ class CommunityDetection(GraphBase):
 
         return score
 
+
 """
 comdetect = CommunityDetection()
 comdetect.read_graph("../datasets/blogcatalog.gml")

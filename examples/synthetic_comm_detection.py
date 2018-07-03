@@ -8,7 +8,7 @@ params = {'directed': False}
 kmeans_num_of_communities = 3
 p = 0.7
 q = 0.3
-k = 80
+k = 128
 sizes = ":".join(str(v) for v in np.ones(kmeans_num_of_communities, dtype=np.int)*400)
 
 
@@ -25,10 +25,10 @@ final_embedding_file = embedding_file + basename + "_p{}_q{}_sizes".format(p, q)
 node_embedding_file = embedding_file + basename + "_p{}_q{}_sizes".format(p, q)+sizes+"_n80_l10_w10_k{}_deepwalk_node.embedding".format(k)
 
 final_comdetect = CommunityDetection(final_embedding_file, graph_path, params=params)
-nmi_score, ccr_score = final_comdetect.evaluate(num_of_communities=kmeans_num_of_communities)
-print("Final Scores NMI:{} CCR:{}".format(nmi_score, ccr_score))
+nmi_score, ccr_score, vi_score, ari_score = final_comdetect.evaluate(num_of_communities=kmeans_num_of_communities)
+print("Final Scores NMI:{} CCR:{} VI:{} ARI:{}".format(nmi_score, ccr_score, vi_score, ari_score))
 
 
 node_comdetect = CommunityDetection(node_embedding_file, graph_path, params=params)
-nmi_score, ccr_score = node_comdetect.evaluate(num_of_communities=kmeans_num_of_communities)
-print("Node Scores NMI:{} CCR:{}".format(nmi_score, ccr_score))
+nmi_score, ccr_score, vi_score, ari_score = node_comdetect.evaluate(num_of_communities=kmeans_num_of_communities)
+print("Node Scores NMI:{} CCR:{} VI:{} ARI:{}".format(nmi_score, ccr_score, vi_score, ari_score))
