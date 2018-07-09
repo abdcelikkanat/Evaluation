@@ -5,11 +5,11 @@ import numpy as np
 
 
 params = {'directed': False}
-kmeans_num_of_communities = 3
-p = 0.7
-q = 0.3
+kmeans_num_of_communities = 8
+p = 0.3
+q = 0.2
 k = 128
-sizes = ":".join(str(v) for v in np.ones(kmeans_num_of_communities, dtype=np.int)*400)
+sizes = ":".join(str(v) for v in np.ones(kmeans_num_of_communities, dtype=np.int)*150)
 
 
 

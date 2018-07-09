@@ -10,8 +10,8 @@ n=1200
 tau1 = 2.2
 tau2 = 2.3
 mindeg = 1
-mincomm = 20
-k = 80
+mincomm = 120
+k = 128
 sizes = ":".join(str(v) for v in np.ones(kmeans_num_of_communities, dtype=np.int)*400)
 
 
