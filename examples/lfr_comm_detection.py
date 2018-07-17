@@ -7,11 +7,11 @@ import numpy as np
 params = {'directed': False}
 kmeans_num_of_communities = 3
 n=1200
-tau1 = 2.2
-tau2 = 2.3
+tau1 = 2.6
+tau2 = 2.1
 mindeg = 1
-mincomm = 120
-k = 128
+mincomm = 400
+k = 256
 sizes = ":".join(str(v) for v in np.ones(kmeans_num_of_communities, dtype=np.int)*400)
 
 

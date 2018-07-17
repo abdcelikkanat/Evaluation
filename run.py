@@ -71,6 +71,9 @@ def process(args):
         if args.ratios == 'some':
             training_ratios = np.arange(1, 10) * 0.1
 
+        if args.ratios == 'all':
+            training_ratios = np.arange(0.01, 0.1, 0.01).tolist() + np.arange(0.1, 1, 0.1).tolist()
+
         nc = NodeClassification(embedding_file=args.emb, graph_path=args.graph, params=params)
         nc.evaluate(number_of_shuffles=args.num_shuffles, training_ratios=training_ratios)
 
