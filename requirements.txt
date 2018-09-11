@@ -1,0 +1,7 @@
+Cython==0.28.3
+gensim==2.3.0
+matplotlib==2.2.2
+networkx==1.11
+numpy==1.14.3
+scikit-learn==0.19.1
+scipy==1.1.0
