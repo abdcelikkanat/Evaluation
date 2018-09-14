@@ -24,7 +24,7 @@ class ByRandomWalks(GraphBase):
 
         self._walks = walks
 
-    def get_community_assignments(self, method=None, temp_dfile_file="gibbsldapp.dfile", params={}):
+    def get_community_assignments_by(self, method=None, temp_dfile_file="gibbsldapp.dfile", params={}):
 
         if method == "LDA":
 
@@ -80,7 +80,7 @@ class ByRandomWalks(GraphBase):
                     phi[topicId, :] = [float(value) for value in line.strip().split()]
 
             max_topics = np.argmax(phi, axis=0)
-            print(max_topics)
+
             node2comm = {}
             for nodeId in id2node:
                 node2comm[id2node[nodeId]] = max_topics[int(nodeId)-1]
@@ -88,10 +88,13 @@ class ByRandomWalks(GraphBase):
             return node2comm
 
 
-params = {'lda_alpha': 0.5, 'lda_beta': 0.8, 'number_of_topics': 2, 'lda_number_of_iters': 1000}
+params = {'lda_alpha': 25.0, 'lda_beta': 0.1, 'number_of_topics': 2, 'lda_number_of_iters': 1000}
 
 brw = ByRandomWalks()
+brw.set_graph(nxg=nx.read_gml("../datasets/karate.gml"))
 brw.read_walks_file("./karate.walks")
-node2comm = brw.get_community_assignments(method="LDA", params=params)
+node2comm = brw.get_community_assignments_by(method="LDA", params=params)
 
 print(node2comm)
+
+brw.plot_graph(node2comm=node2comm)
