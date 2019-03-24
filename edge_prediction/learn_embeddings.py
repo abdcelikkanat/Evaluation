@@ -1,7 +1,7 @@
-from tne.tne import TNE
-from utils.utils import find_topics_for_nodes, concatenate_embeddings
-from os.path import basename, splitext, join
 import os
+from edge_prediction.TNE.tne.tne import *
+from os.path import basename, splitext, join
+import time
 
 
 def read_embedding_file(file_path):
@@ -14,49 +14,42 @@ def read_embedding_file(file_path):
 
     return embeddings
 
-def learn_tne_embeddings(nxg, base_folder, params):
 
-    tne = TNE(params=params)
-    tne.set_graph(nxg)
+def learn_embeddings(nx_graph_path, params, file_desc, temp_folder, embedding_folder):
 
-    temp_folder = os.path.join("./temp", base_folder)
-    if not os.path.exists(temp_folder):
-        os.makedirs(temp_folder)
-    outputs_folder = os.path.join("./outputs", base_folder)
-    if not os.path.exists(outputs_folder):
-        os.makedirs(outputs_folder)
+    # Determine the paths of embedding files
+    node_embedding_file = join(embedding_folder, "{}_node.embedding".format(file_desc))
+    community_embedding_file = join(embedding_folder, "{}_community.embedding".format(file_desc))
 
-    base_desc = "{}_n{}_l{}_w{}_k{}_{}".format(params['graph_name'],
-                                               params['number_of_walks'],
-                                               params['walk_length'],
-                                               params['window_size'],
-                                               params['number_of_topics'],
-                                               params['method'])
+    concatenated_embedding_file = dict()
+    concatenated_embedding_file['max'] = join(embedding_folder, "{}_final_max.embedding".format(file_desc))
+    concatenated_embedding_file['wmean'] = join(embedding_folder, "{}_final_wmean.embedding".format(file_desc))
+    concatenated_embedding_file['min'] = join(embedding_folder, "{}_final_min.embedding".format(file_desc))
 
-    # node corpus1
-    corpus_path_for_node = join(temp_folder, "{}_node_corpus.corpus".format(base_desc))
-    # lda corpus
-    corpus_path_for_lda = join(temp_folder, "{}_lda_corpus.corpus".format(base_desc))
-    # embedding files
-    node_embedding_file = join(outputs_folder, "{}_node.embedding".format(base_desc))
-    topic_embedding_file = join(outputs_folder, "{}_topic.embedding".format(base_desc))
-    concatenated_embedding_file_max = join(outputs_folder, "{}_final_max.embedding".format(base_desc))
+    # The path for the corpus
+    corpus_path_for_node = join(temp_folder, "{}_node_corpus.corpus".format(file_desc))
 
-    tne.perform_random_walks(node_corpus_path=corpus_path_for_node)
-    tne.save_corpus(corpus_path_for_lda, with_title=True)
-    id2node = tne.run_lda(lda_corpus_path=corpus_path_for_lda)
-    tne.learn_node_embedding(node_corpus_path=corpus_path_for_node, node_embedding_file=node_embedding_file)
-    tne.learn_topic_embedding(node_corpus_path=corpus_path_for_node, topic_embedding_file=topic_embedding_file)
+    tne = TNE(nx_graph_path, temp_folder, params)
+    tne.perform_random_walks(output_node_corpus_file=corpus_path_for_node)
+    tne.preprocess_corpus(process="equalize")
+    phi = tne.generate_community_corpus(method=params['comm_detection_method'])
 
-    # Concatenate the embeddings
-    phi_file = tne.get_file_path(filename='phi')
-    node2topic_max = find_topics_for_nodes(phi_file, id2node, params['number_of_topics'], type="max")
-    concatenate_embeddings(node_embedding_file=node_embedding_file,
-                           topic_embedding_file=topic_embedding_file,
-                           node2topic=node2topic_max,
-                           output_filename=concatenated_embedding_file_max)
+    tne.learn_node_embedding(output_node_embedding_file=node_embedding_file)
+    tne.learn_topic_embedding(output_topic_embedding_file=community_embedding_file)
 
-    return read_embedding_file(node_embedding_file), read_embedding_file(concatenated_embedding_file_max)
+    # Compute the corresponding topics for each node
+    for embedding_strategy in ["max", "min", "wmean"]:
+        initial_time = time.time()
+        # Concatenate the embeddings
+        concatenate_embeddings(node_embedding_file=node_embedding_file,
+                               topic_embedding_file=community_embedding_file,
+                               phi=phi,
+                               method=embedding_strategy,
+                               output_filename=concatenated_embedding_file[embedding_strategy])
+        print("-> The {} embeddings were generated and saved in {:.2f} secs | {}".format(
+            embedding_strategy, (time.time() - initial_time), concatenated_embedding_file[embedding_strategy]))
+
+    return read_embedding_file(node_embedding_file), read_embedding_file(concatenated_embedding_file["max"])
 
 
 def learn_embedings(algorithm, nxg, base_folder, params):

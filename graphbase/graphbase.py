@@ -1,6 +1,7 @@
 import os
 import networkx as nx
-
+import matplotlib.pyplot as plt
+from os.path import basename, splitext
 
 class GraphBase:
     def __init__(self):
@@ -23,6 +24,8 @@ class GraphBase:
 
         else:
             raise ValueError("Invalid graph file format!")
+
+        self.set_graph_name(graph_name=splitext(basename(graph_path))[0])
 
     def set_graph_name(self, graph_name):
         self.graph_name = graph_name
@@ -53,3 +56,26 @@ class GraphBase:
                 max_community_label = c_max
 
         return max_community_label + 1
+
+    def plot_graph(self, node2comm):
+
+        k = len(set(node2comm.values()))
+
+        colors = ['r', 'b', 'g', 'c', 'm', 'y', 'k', 'w']
+
+        nodelist = [[] for _ in range(k)]
+        for node in node2comm:
+            nodelist[int(node2comm[node])].append(node)
+
+        pos = nx.spring_layout(self.g)
+
+        for i in range(k):
+            nx.draw_networkx_nodes(self.g, pos,
+                                   nodelist=nodelist[i],
+                                   node_color=colors[i],
+                                   node_size=100,
+                                   alpha=0.8)
+
+        nx.draw_networkx_edges(self.g, pos, width=1.0, alpha=0.5)
+
+        plt.show()

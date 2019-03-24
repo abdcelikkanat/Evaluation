@@ -14,7 +14,7 @@ for node in node2comm:
         nb_com_list[node2comm[nb]] += 1
         for nb_nb in nx.neighbors(g, nb):
             if nb_nb != nb and nb_nb != node:
-                nb_com_list[node2comm[nb_nb]] +=  #ILGINC
+                nb_com_list[node2comm[nb_nb]] += 1 #ILGINC
 
     if node2comm[node] == np.argmax(nb_com_list):
         score += 1.0

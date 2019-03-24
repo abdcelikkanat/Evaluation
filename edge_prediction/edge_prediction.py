@@ -8,17 +8,11 @@ from sklearn import metrics, model_selection, pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from sklearn import preprocessing
-
-
-
-from os.path import basename, splitext, join
-sys.path.append("./TNE")
-sys.path.append("../")
-from graphbase.graphbase import *
-from tne.tne import TNE
-from utils.utils import find_topics_for_nodes, concatenate_embeddings
-from learn_embeddings import *
 import pickle
+
+from graphbase.graphbase import *
+from edge_prediction.learn_embeddings import learn_embeddings
+
 
 _operators = ["hadamard", "average", "l1", "l2"]
 
@@ -77,7 +71,6 @@ class EdgePrediction(GraphBase):
         train_pos_samples = list(residual_g.edges())
         return residual_g, train_pos_samples, train_neg_samples, test_pos_samples, test_neg_samples
 
-
     def get_feature_vectors_from_embeddings(self, edges, embeddings, binary_operator):
 
         features = []
@@ -100,83 +93,158 @@ class EdgePrediction(GraphBase):
 
         return np.asarray(features)
 
-    def learn_embedings(self, algorithm, nxg, base_folder, params):
+    def get_scores(self, train_test_ratio, params, file_desc, temp_folder, embedding_folder):
 
-        if algorithm == 'tne':
-            return learn_tne_embeddings(nxg, base_folder, params)
-
-
-    def run(self, algorithm, ratio, params):
-
-        residual_g, train_pos, train_neg, test_pos, test_neg = self.split_into_train_test_sets(ratio=ratio)
+        # Divide the data into training and test sets
+        residual_g, train_pos, train_neg, test_pos, test_neg = self.split_into_train_test_sets(ratio=train_test_ratio)
+        # Save the residual graph
+        residual_g_save_path = os.path.join(temp_folder, self.get_graph_name() + "_residual.gml")
+        nx.write_gml(residual_g, residual_g_save_path)
         #test_g, _, _, test_pos, test_neg = self.split_into_train_test_sets(ratio=ratio)
-
+        # Prepare the positive and negative samples for training set
         train_samples = train_pos + train_neg
         train_labels = [1 for _ in train_pos] + [0 for _ in train_neg]
-
+        # Prepare the positive and negative samples for test set
         test_samples = test_pos + test_neg
         test_labels = [1 for _ in test_pos] + [0 for _ in test_neg]
 
-        if algorithm == 'tne':
-            train_embedding_folder = os.path.join(self.get_graph_name(), "train")
-            train_node_embedding, train_final_embedding = learn_tne_embeddings(nxg=residual_g,
-                                                                               base_folder=train_embedding_folder,
-                                                                               params=params)
-            """
-            test_g = nx.Graph()
-            test_g.add_nodes_from(train_g.nodes())
-            test_g.add_edges_from(test_pos)
-            """
-            #test_embedding_folder = os.path.join(self.get_graph_name(), "test")
-            #test_node_embedding, test_final_embedding = learn_tne_embeddings(nxg=residual_g,
-            #                                                                 base_folder=test_embedding_folder,
-            #                                                                 params=params)
+        # Run TNE
+        train_node_embedding, train_final_embedding = learn_embeddings(nx_graph_path=residual_g_save_path,
+                                                                       params=params,
+                                                                       file_desc=file_desc,
+                                                                       temp_folder=temp_folder,
+                                                                       embedding_folder=embedding_folder)
+        """
+        test_g = nx.Graph()
+        test_g.add_nodes_from(train_g.nodes())
+        test_g.add_edges_from(test_pos)
+        """
+        #test_embedding_folder = os.path.join(self.get_graph_name(), "test")
+        #test_node_embedding, test_final_embedding = learn_tne_embeddings(nxg=residual_g,
+        #                                                                 base_folder=test_embedding_folder,
+        #                                                                 params=params)
 
-            scores_node = {op: {'train': [], 'test': []} for op in _operators}
-            scores_final = {op: {'train': [], 'test': []} for op in _operators}
-            for op in _operators:
+        scores_node = {op: {'train': [], 'test': []} for op in _operators}
+        scores_final = {op: {'train': [], 'test': []} for op in _operators}
 
-                train_node_features = self.get_feature_vectors_from_embeddings(edges=train_samples,
-                                                                               embeddings=train_node_embedding,
-                                                                               binary_operator=op)
-                train_final_features = self.get_feature_vectors_from_embeddings(edges=train_samples,
-                                                                                embeddings=train_final_embedding,
-                                                                                binary_operator=op)
-                test_node_features = self.get_feature_vectors_from_embeddings(edges=test_samples,
-                                                                              embeddings=train_node_embedding,
-                                                                              binary_operator=op)
-                test_final_features = self.get_feature_vectors_from_embeddings(edges=test_samples,
-                                                                               embeddings=train_final_embedding,
-                                                                               binary_operator=op)
-                # For node
-                for _ in range(1):
-                    clf_node = LogisticRegression()
-                    clf_node.fit(train_node_features, train_labels)
+        for op in _operators:
 
-                    train_node_preds = clf_node.predict_proba(train_node_features)[:, 1]
-                    test_node_preds = clf_node.predict_proba(test_node_features)[:, 1]
+            train_node_features = self.get_feature_vectors_from_embeddings(edges=train_samples,
+                                                                           embeddings=train_node_embedding,
+                                                                           binary_operator=op)
+            train_final_features = self.get_feature_vectors_from_embeddings(edges=train_samples,
+                                                                            embeddings=train_final_embedding,
+                                                                            binary_operator=op)
+            test_node_features = self.get_feature_vectors_from_embeddings(edges=test_samples,
+                                                                          embeddings=train_node_embedding,
+                                                                          binary_operator=op)
+            test_final_features = self.get_feature_vectors_from_embeddings(edges=test_samples,
+                                                                           embeddings=train_final_embedding,
+                                                                           binary_operator=op)
+            # For node
+            for _ in range(1):
+                clf_node = LogisticRegression()
+                clf_node.fit(train_node_features, train_labels)
 
-                    train_node_roc = roc_auc_score(y_true=train_labels, y_score=train_node_preds)
-                    test_node_roc = roc_auc_score(y_true=test_labels, y_score=test_node_preds)
+                train_node_preds = clf_node.predict_proba(train_node_features)[:, 1]
+                test_node_preds = clf_node.predict_proba(test_node_features)[:, 1]
 
-                    scores_node[op]['train'].append(train_node_roc)
-                    scores_node[op]['test'].append(test_node_roc)
+                train_node_roc = roc_auc_score(y_true=train_labels, y_score=train_node_preds)
+                test_node_roc = roc_auc_score(y_true=test_labels, y_score=test_node_preds)
 
-                    # For final
-                    clf_final = LogisticRegression()
-                    clf_final.fit(train_final_features, train_labels)
+                scores_node[op]['train'].append(train_node_roc)
+                scores_node[op]['test'].append(test_node_roc)
 
-                    train_final_preds = clf_final.predict_proba(train_final_features)[:, 1]
-                    test_final_preds = clf_final.predict_proba(test_final_features)[:, 1]
+                # For final
+                clf_final = LogisticRegression()
+                clf_final.fit(train_final_features, train_labels)
 
-                    train_final_roc = roc_auc_score(y_true=train_labels, y_score=train_final_preds)
-                    test_final_roc = roc_auc_score(y_true=test_labels, y_score=test_final_preds)
+                train_final_preds = clf_final.predict_proba(train_final_features)[:, 1]
+                test_final_preds = clf_final.predict_proba(test_final_features)[:, 1]
 
-                    scores_final[op]['train'].append(train_final_roc)
-                    scores_final[op]['test'].append(test_final_roc)
+                train_final_roc = roc_auc_score(y_true=train_labels, y_score=train_final_preds)
+                test_final_roc = roc_auc_score(y_true=test_labels, y_score=test_final_preds)
 
-            return scores_node, scores_final
+                scores_final[op]['train'].append(train_final_roc)
+                scores_final[op]['test'].append(test_final_roc)
 
+        return scores_node, scores_final
+
+    def split_network(self, train_test_ratio, target_folder):
+
+        # Divide the data into training and test sets
+        residual_g, train_pos, train_neg, test_pos, test_neg = self.split_into_train_test_sets(ratio=train_test_ratio)
+
+        # Prepare the positive and negative samples for training set
+        train_samples = train_pos + train_neg
+        train_labels = [1 for _ in train_pos] + [0 for _ in train_neg]
+        # Prepare the positive and negative samples for test set
+        test_samples = test_pos + test_neg
+        test_labels = [1 for _ in test_pos] + [0 for _ in test_neg]
+
+        # Check if the target folder exists or not
+        if not os.path.isdir(target_folder):
+            os.mkdir(target_folder)
+
+        # Save the residual network
+        residual_g_save_path = os.path.join(target_folder, self.get_graph_name() + "_residual.gml")
+        nx.write_gml(residual_g, residual_g_save_path)
+
+        # Save positive and negative samples for training and test sets
+        save_file_path = os.path.join(target_folder, self.get_graph_name() + "_samples.pkl")
+        with open(save_file_path, 'wb') as f:
+            pickle.dump({'train': {'edges':train_samples, 'labels': train_labels },
+                         'test': {'edges':test_samples, 'labels': test_labels}}, f, pickle.HIGHEST_PROTOCOL)
+
+    def read_samples(self, file_path):
+
+        with open(file_path, 'rb') as f:
+            temp = pickle.load(f)
+            #residual_g = temp['residual_g']
+            train_samples, train_labels = temp['train']['edges'], temp['train']['labels']
+            test_samples, test_labels = temp['test']['edges'], temp['test']['labels']
+
+            return train_samples, train_labels, test_samples, test_labels
+
+    def predict(self, embedding_file_path, train_samples, train_labels, test_samples, test_labels):
+
+        embeddings = {}
+        with open(embedding_file_path, 'r') as fin:
+            # skip the first line
+            num_of_nodes, dim = fin.readline().strip().split()
+            # read the embeddings
+            for line in fin.readlines():
+                tokens = line.strip().split()
+                embeddings[tokens[0]] = [float(v) for v in tokens[1:]]
+
+        scores = {op: {'train': [], 'test': []} for op in _operators}
+
+        for op in _operators:
+
+            train_features = self.get_feature_vectors_from_embeddings(edges=train_samples,
+                                                                      embeddings=embeddings,
+                                                                      binary_operator=op)
+
+            test_features = self.get_feature_vectors_from_embeddings(edges=test_samples,
+                                                                     embeddings=embeddings,
+                                                                     binary_operator=op)
+            # For node
+            for _ in range(1):
+                clf = LogisticRegression()
+                clf.fit(train_features, train_labels)
+
+                train_preds = clf.predict_proba(train_features)[:, 1]
+                test_preds = clf.predict_proba(test_features)[:, 1]
+
+                train_roc = roc_auc_score(y_true=train_labels, y_score=train_preds)
+                test_roc = roc_auc_score(y_true=test_labels, y_score=test_preds)
+
+                scores[op]['train'].append(train_roc)
+                scores[op]['test'].append(test_roc)
+
+        return scores
+
+"""
 
 params = {}
 params['method'] = 'deepwalk'
@@ -225,3 +293,4 @@ for graphname in ["facebook_combined"]:
     with open(os.path.join(scores_folder,"{}_{}_final.score".format(graphname, params['method'])), "wb") as fp:
         pickle.dump(total_scores_tne, fp)
 
+"""
