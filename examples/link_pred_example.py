@@ -14,16 +14,16 @@ repeat_count = 1
 graph_names = ["facebook_combined_gcc"] #ca-AstroPh_gcc  facebook_combined_gcc # ["facebook_combined", "CA-AstroPh", "p2p-Gnutella09"]
 # Set all parameters #
 params = {}
-params['comm_detection_method'] = "lda"
-params['random_walk'] = "node2vec"
+params['comm_detection_method'] = "louvain"
+params['random_walk'] = "deepwalk"
 # Common parameters
-params['number_of_walks'] = 8 #80
+params['number_of_walks'] = 80 #80
 params['walk_length'] = 10
 params['window_size'] = 10
 params['embedding_size'] = 128
-params['number_of_communities'] = 8 #80
+params['number_of_communities'] = 80 #80
 # Parameters for LDA
-params['lda_number_of_iters'] = 10 #1000
+params['lda_number_of_iters'] = 1000 #1000
 params['lda_alpha'] = 0.2
 params['lda_beta'] = 0.1
 # Parameters for Deepwalk
@@ -48,7 +48,7 @@ for graphname in graph_names:
     ### Initial path definitions ###
     base_folder = os.path.dirname(os.path.abspath(__file__))
 
-    nx_graph_path = os.path.realpath(os.path.join(base_folder, "..", "datasets", graphname + ".gml"))
+    nx_graph_path = os.path.realpath(os.path.join(base_folder, "..", "..", "datasets", graphname + ".gml"))
 
     file_desc = "{}_{}_n{}_l{}_w{}_k{}_{}".format(splitext(basename(nx_graph_path))[0],
                                                   params['comm_detection_method'],
