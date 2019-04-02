@@ -244,6 +244,72 @@ class EdgePrediction(GraphBase):
 
         return scores
 
+    def precision_recall_at_k(self, embedding_file_path, train_samples, train_labels, test_samples, test_labels):
+
+        embeddings = {}
+        with open(embedding_file_path, 'r') as fin:
+            # skip the first line
+            num_of_nodes, dim = fin.readline().strip().split()
+            # read the embeddings
+            for line in fin.readlines():
+                tokens = line.strip().split()
+                embeddings[tokens[0]] = [float(v) for v in tokens[1:]]
+
+        num_of_samples = len(test_samples)
+        #scores = {op: {'train': [], 'test': []} for op in _operators}
+        precisions = {op: [0.0 for _ in range(num_of_samples)] for op in _operators}
+        recalls = {op: [0.0 for _ in range(num_of_samples)] for op in _operators}
+
+        for op in _operators:
+
+            train_features = self.get_feature_vectors_from_embeddings(edges=train_samples,
+                                                                      embeddings=embeddings,
+                                                                      binary_operator=op)
+
+            test_features = self.get_feature_vectors_from_embeddings(edges=test_samples,
+                                                                     embeddings=embeddings,
+                                                                     binary_operator=op)
+
+            clf = LogisticRegression()
+            clf.fit(train_features, train_labels)
+
+            test_pred_probs = clf.predict_proba(test_features)[:, 1]
+            test_true_labels = np.asarray(test_labels, dtype=np.int)
+
+            data = np.vstack((test_pred_probs, test_true_labels)).T
+            sorted_data = np.asarray(sorted(data, key=lambda x: x[0], reverse=True))
+
+            test_pred_probs = sorted_data[:, 0]
+            test_true_labels = sorted_data[:, 1]
+
+            n_rec_k = 0.0
+            n_rel = sum(test_true_labels == 1)
+            n_rel_and_rec_k = 0.0
+            for k in range(num_of_samples):
+                # Number of recommended items in top k
+                n_rec_k += (test_pred_probs[k] >= 0.5)
+                # Number of relevant and recommended items in top k
+                n_rel_and_rec_k += (test_pred_probs[k] >= 0.5 and test_true_labels[k] == 1)
+                # Precision@K: Proportion of recommended items that are relevant
+                precisions[op][k] = n_rel_and_rec_k / n_rec_k
+
+                recalls[op][k] = n_rel_and_rec_k / float(n_rel)
+
+            '''
+            #print(len(test_labels))
+            k = 80000
+            # Number of recommended items in top k
+            n_rec_k = float(sum(test_pred_probs[:k] >= 0.5))
+
+            # Number of relevant and recommended items in top k
+            n_rel_and_rec_k = sum((test_pred_probs[kk] >= 0.5 and test_true_labels[kk] == 1) for kk in range(k))
+
+            # Precision@K: Proportion of recommended items that are relevant
+            precision = n_rel_and_rec_k / n_rec_k if n_rec_k != 0 else 1
+            '''
+
+        return precisions, recalls
+
 """
 
 params = {}
