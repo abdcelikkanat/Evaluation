@@ -61,7 +61,8 @@ class NodeClassification(Evaluation):
                 test_labels = shuffled_labels[train_size:]
 
                 # Train the classifier
-                ovr = OneVsRestClassifier(LogisticRegression())
+                ovr = OneVsRestClassifier(LogisticRegression(solver='liblinear'))
+
                 ovr.fit(train_features, train_labels)
 
                 # Find the predictions, each node can have multiple labels
@@ -88,37 +89,58 @@ class NodeClassification(Evaluation):
 
         self.results = results
 
-    def get_results(self, detailed=False):
-        output = ""
-        if detailed is True:
-            for average in ["micro", "macro"]:
-                output += average + "\n"
-                for ratio in self.results[average]:
-                    output += " percent {}%\n".format(ratio)
-                    scores = self.results[average][ratio]
-                    for num in range(len(scores)):
-                        output += "  Shuffle #{}: {}\n".format(num, self.results[average][ratio][num])
-                    output += "  Average: {} Std-dev: {}\n".format(np.mean(scores), np.std(scores))
-                output += "\n"
-        else:
-            output += "Training percents: " + " ".join("{}%".format(p * 100) for p in self.results["micro"]) + "\n"
-            for average in ["micro", "macro"]:
-                output += average + ": "
-                for ratio in self.results[average]:
-                    scores = self.results[average][ratio]
-                    output += "{0:.5g}:{1:.5g} ".format(np.mean(scores), np.std(scores))
-                output += "\n"
 
-        return output
+    def get_results(self, shuffle_var, detailed=False, format='txt'):
 
-    def print_results(self, detailed=False):
-        output = self.get_results(detailed=detailed)
+        if format == 'txt':
+            output = ""
+            if detailed is True:
+                for average in ["micro", "macro"]:
+                    output += average + "\n"
+                    for ratio in self.results[average]:
+                        output += " percent {}%\n".format(ratio)
+                        scores = self.results[average][ratio]
+                        for num in range(len(scores)):
+                            output += "  Shuffle #{}: {}\n".format(num, self.results[average][ratio][num])
+                        output += "  Average: {} Std-dev: {}\n".format(np.mean(scores), np.std(scores))
+                    output += "\n"
+            else:
+                output += "Training percents: " + " ".join("{0:.2f}%".format(p * 100) for p in self.results["micro"]) + "\n"
+                for average in ["micro", "macro"]:
+                    output += average + ": "
+                    for ratio in self.results[average]:
+                        scores = self.results[average][ratio]
+                        output += "{0:.5g}".format(np.mean(scores))
+                        if shuffle_var is True:
+                            output += ":{1:.5g}".format(np.std(scores))
+                        output += " "
+                    output += "\n"
+
+            return output
+
+        if format == "npy":
+            results = [[], []]
+            for m, average in enumerate(["micro", "macro"]):
+                for ratio in self.results[average]:
+                    scores = self.results[average][ratio]
+                    results[m].append(np.mean(scores))
+
+            return results
+
+
+    def print_results(self, shuffle_var, detailed=False):
+        output = self.get_results(shuffle_var, detailed=detailed)
         print(output)
 
-    def save_results(self, output_file, detailed=False):
-        output = self.get_results(detailed=detailed)
-        with open(output_file, 'w') as f:
-            f.write(output)
+    def save_results(self, output_file, shuffle_var, detailed=False, save_format="txt"):
+        output = self.get_results(shuffle_var, detailed=detailed, format=save_format)
+
+        if save_format == "txt":
+            with open(output_file, 'w') as f:
+                f.write(output)
+        if save_format == "npy":
+            np.save(output_file, output)
+
 
 
 
